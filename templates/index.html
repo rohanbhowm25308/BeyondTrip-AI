@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BeyondTrip — Plan past the obvious</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+<canvas id="network-bg"></canvas>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="brand-mark"></span>
+    <span class="brand-name">BeyondTrip</span>
+  </div>
+  <nav class="topnav">
+    <a href="#plan">Plan a trip</a>
+    <a href="#gems">Hidden gems</a>
+    <a href="#expense">Costs</a>
+    <a href="#dashboard">Recommendation</a>
+  </nav>
+</header>
+
+<main>
+
+  <section class="hero">
+    <div class="hero-text">
+      <h1>Five friends. One budget.<br>A hundred places nobody's showing you.</h1>
+      <p class="hero-sub">Tell us who's going and what you care about. BeyondTrip weighs every travel mode against
+      real trip cost, finds consensus across the whole group, and routes you to the corners of the destination
+      the guidebooks skip.</p>
+    </div>
+
+    <form id="plan-form" class="plan-card">
+      <div class="plan-card-header">
+        <h2>Build the trip</h2>
+        <span class="plan-card-sub">Delhi → Jaipur, 5 people, ₹30,000 — or your own numbers</span>
+      </div>
+
+      <div class="field-row">
+        <label>From
+          <input type="text" name="source" placeholder="Delhi" required>
+        </label>
+        <label>To
+          <input type="text" name="destination" placeholder="Jaipur" required>
+        </label>
+      </div>
+
+      <div class="field-row">
+        <label>Travelers
+          <input type="number" name="travelers" min="1" value="5" required>
+        </label>
+        <label>Days
+          <input type="number" name="days" min="1" value="3" required>
+        </label>
+        <label>Total budget (₹)
+          <input type="number" name="budget" min="0" step="500" value="30000" required>
+        </label>
+      </div>
+
+      <div class="field-row">
+        <label>Food / person / day (₹)
+          <input type="number" name="food_budget_pp" min="0" step="50" value="500">
+        </label>
+        <label>Shopping / person (₹)
+          <input type="number" name="shopping_budget_pp" min="0" step="100" value="1000">
+        </label>
+        <label>Hotel / person / night (₹)
+          <input type="number" name="hotel_pp_per_night" min="0" step="100" value="1500">
+        </label>
+      </div>
+
+      <div class="field-row">
+        <label class="checks-label">Interests
+          <div class="chip-set" id="interest-chips">
+            <button type="button" class="chip active" data-value="photography">Photography</button>
+            <button type="button" class="chip active" data-value="history">History</button>
+            <button type="button" class="chip active" data-value="food">Food</button>
+            <button type="button" class="chip" data-value="shopping">Shopping</button>
+            <button type="button" class="chip" data-value="adventure">Adventure</button>
+          </div>
+        </label>
+      </div>
+
+      <div class="slider-block">
+        <h3>Trip trade-off simulator</h3>
+        <div class="slider-row">
+          <span>Budget</span>
+          <input type="range" id="slider-budget-comfort" min="0" max="100" value="40">
+          <span>Comfort</span>
+        </div>
+        <div class="slider-row">
+          <span>Savings</span>
+          <input type="range" id="slider-speed-savings" min="0" max="100" value="40">
+          <span>Speed</span>
+        </div>
+        <div class="slider-row">
+          <span>Popular</span>
+          <input type="range" id="slider-popular-hidden" min="0" max="100" value="65">
+          <span>Hidden</span>
+        </div>
+        <div class="slider-row">
+          <span>Activities</span>
+          <input type="range" id="slider-shopping-activities" min="0" max="100" value="50">
+          <span>Shopping</span>
+        </div>
+        <div class="field-row">
+          <label>Discovery radius
+            <select id="radius-select">
+              <option value="5">Within 5 km</option>
+              <option value="10" selected>Within 10 km</option>
+              <option value="20">Within 20 km</option>
+            </select>
+          </label>
+        </div>
+      </div>
+
+      <button type="submit" class="cta-primary">Generate the plan</button>
+    </form>
+  </section>
+
+  <section id="plan" class="section results-section hidden">
+
+    <div id="dashboard" class="panel decision-panel">
+      <div class="decision-top">
+        <div class="decision-mode-icon" id="decision-mode-icon">🚆</div>
+        <div class="decision-main">
+          <h2 id="decision-headline">Recommended for your group: Train</h2>
+          <p class="decision-metrics" id="decision-metrics"></p>
+          <p class="decision-budget" id="decision-budget"></p>
+          <p class="decision-match" id="decision-match"></p>
+        </div>
+        <div class="trip-score-ring" id="trip-score-ring" style="--pct:0">
+          <span id="trip-score-number">—</span>
+          <small>BeyondTrip Score</small>
+        </div>
+      </div>
+
+      <div class="decision-grid">
+        <div class="decision-card">
+          <h4>Why this won</h4>
+          <p id="decision-why"></p>
+        </div>
+        <div class="decision-card sacrifice">
+          <h4>What you sacrifice</h4>
+          <ul id="decision-sacrifice"></ul>
+        </div>
+        <div class="decision-card gain">
+          <h4>What you gain</h4>
+          <ul id="decision-gain"></ul>
+        </div>
+        <div class="decision-card">
+          <h4>Alternative option</h4>
+          <p id="decision-alternative"></p>
+        </div>
+      </div>
+
+      <div class="trip-score-breakdown" id="trip-score-breakdown"></div>
+    </div>
+
+    <div class="panel briefing-panel">
+      <div class="panel-head">
+        <h2>BeyondTrip AI Briefing <span class="briefing-source" id="briefing-source"></span></h2>
+        <p class="explain">A short, plain-language explanation of the optimizer's pick — why it won, what drove it, the trade-off, and what to do next.</p>
+      </div>
+      <div id="briefing-body" class="briefing-body">
+        <p class="muted">Generating briefing…</p>
+      </div>
+    </div>
+
+    <div class="panel modes-panel">
+      <div class="panel-head">
+        <h2>Every way to get there</h2>
+        <p class="explain" id="modes-explain"></p>
+      </div>
+      <div class="modes-grid" id="modes-grid"></div>
+      <div class="modes-legend" id="modes-legend"></div>
+    </div>
+
+    <div class="panel consensus-panel">
+      <div class="panel-head">
+        <h2>Group consensus engine</h2>
+        <p class="explain">Add travelers in the voting panel below, then re-generate — this shows whether the
+        recommended mode actually works for the whole group, not just the loudest preference.</p>
+      </div>
+      <div id="consensus-body" class="consensus-body">
+        <p class="muted">Add at least one traveler's priorities below, then regenerate the plan.</p>
+      </div>
+    </div>
+
+    <div class="panel zones-panel">
+      <div class="panel-head">
+        <h2>Zones of <span id="dest-name-zones">the destination</span></h2>
+        <p class="explain">Instead of one attraction list, the destination splits into areas by what they're actually good for.</p>
+      </div>
+      <div class="zones-grid" id="zones-grid"></div>
+    </div>
+
+    <div id="gems" class="panel gems-panel">
+      <div class="panel-head">
+        <h2>Hidden gems, ranked for this group</h2>
+        <p class="explain" id="gems-explain">Scored against the interests and sliders above — not popularity.</p>
+      </div>
+      <div class="gems-grid" id="gems-grid"></div>
+    </div>
+
+    <div class="panel traps-panel">
+      <div class="panel-head">
+        <h2>Tourist trap detector</h2>
+        <p class="explain">A similar experience nearby, usually for a fraction of the spend.</p>
+      </div>
+      <div class="traps-list" id="traps-list"></div>
+    </div>
+
+    <div class="panel itinerary-panel">
+      <div class="panel-head">
+        <h2>Crowd-aware itinerary</h2>
+        <p class="explain">Hidden spots scheduled early when they're quiet, popular attractions pushed later to dodge the crowd.</p>
+      </div>
+      <div class="itinerary-timeline" id="itinerary-timeline"></div>
+
+      <div class="replan-row">
+        <label>Simulate a delay (minutes)
+          <input type="number" id="replan-delay" min="0" step="15" value="0">
+        </label>
+        <button type="button" class="cta-secondary" id="replan-run">⚡ Last-minute replanner</button>
+      </div>
+      <p class="replan-msg" id="replan-msg"></p>
+    </div>
+
+    <div id="expense" class="panel expense-panel">
+      <div class="panel-head">
+        <h2>True trip cost</h2>
+        <p class="explain">Not the ticket price — travel, stay, food, local transport, activities, shopping, and a buffer.</p>
+      </div>
+      <div class="expense-body">
+        <div class="expense-bars" id="expense-bars"></div>
+        <div class="expense-total" id="expense-total"></div>
+      </div>
+      <div class="budget-warning hidden" id="budget-warning"></div>
+    </div>
+
+    <div class="panel negotiator-panel">
+      <div class="panel-head">
+        <h2>Budget negotiator AI</h2>
+        <p class="explain">Auto-splits the total budget across categories. Ask for more in one category and the rest rebalance.</p>
+      </div>
+      <div class="negotiator-body">
+        <div class="expense-bars" id="negotiator-bars"></div>
+        <div class="negotiator-controls">
+          <label>Category
+            <select id="negotiate-category">
+              <option value="transport">Transport</option>
+              <option value="stay">Stay</option>
+              <option value="food">Food</option>
+              <option value="activities">Activities</option>
+              <option value="shopping" selected>Shopping</option>
+              <option value="emergency">Emergency</option>
+            </select>
+          </label>
+          <label>Amount (₹)
+            <input type="number" id="negotiate-amount" value="5000" step="500">
+          </label>
+          <label>Mode
+            <select id="negotiate-mode">
+              <option value="reallocate">Reallocate from other categories</option>
+              <option value="increase">Increase total budget</option>
+            </select>
+          </label>
+          <button type="button" class="cta-secondary" id="negotiate-run">Apply</button>
+        </div>
+        <p class="negotiate-msg" id="negotiate-msg"></p>
+      </div>
+    </div>
+
+    <div class="panel whatif-panel">
+      <div class="panel-head">
+        <h2>What changed?</h2>
+        <p class="explain">Pick a hypothetical and see the before → after, instantly.</p>
+      </div>
+      <div class="whatif-buttons">
+        <button type="button" class="cta-secondary whatif-btn" data-type="budget_delta" data-value="5000" data-label="+₹5,000 budget">+₹5,000 budget</button>
+        <button type="button" class="cta-secondary whatif-btn" data-type="exclude_mode" data-mode="flight" data-label="No flight">No flight</button>
+        <button type="button" class="cta-secondary whatif-btn" data-type="shopping_delta" data-value="5000" data-label="+₹5,000 shopping">+₹5,000 shopping</button>
+        <button type="button" class="cta-secondary whatif-btn" data-type="maximize_speed" data-label="We need it 2h faster">We need it 2h faster</button>
+      </div>
+      <div id="whatif-result" class="whatif-result hidden"></div>
+    </div>
+
+    <div class="panel voting-panel">
+      <div class="panel-head">
+        <h2>Group preference voting</h2>
+        <p class="explain">Add each traveler's priorities and what they've personally spent so far. The plan adjusts
+        to the group, and the expense balancer below settles who owes whom.</p>
+      </div>
+      <div class="voting-body">
+        <form id="person-form" class="person-form">
+          <input type="text" name="name" placeholder="Traveler name" required>
+          <div class="priority-grid">
+            <label>Budget <select name="budget"><option>low</option><option selected>medium</option><option>high</option></select></label>
+            <label>Comfort <select name="comfort"><option>low</option><option selected>medium</option><option>high</option></select></label>
+            <label>Food <select name="food"><option>low</option><option selected>medium</option><option>high</option></select></label>
+            <label>Shopping <select name="shopping"><option>low</option><option selected>medium</option><option>high</option></select></label>
+            <label>Adventure <select name="adventure"><option>low</option><option selected>medium</option><option>high</option></select></label>
+            <label>Photography <select name="photography"><option>low</option><option selected>medium</option><option>high</option></select></label>
+          </div>
+          <label>Amount already spent (₹, optional)
+            <input type="number" name="spent" min="0" step="100" value="0">
+          </label>
+          <button type="submit" class="cta-secondary">Add traveler</button>
+        </form>
+        <div class="people-and-scores">
+          <ul id="people-list" class="people-list"></ul>
+          <div class="pref-bars" id="pref-bars"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel prefmap-panel">
+      <div class="panel-head">
+        <h2>Group preference map</h2>
+        <p class="explain">Everyone's priorities, side by side — then the consensus the AI landed on.</p>
+      </div>
+      <div id="prefmap-body" class="prefmap-body">
+        <p class="muted">Add travelers above to see the map.</p>
+      </div>
+    </div>
+
+    <div class="panel settlement-panel">
+      <div class="panel-head">
+        <h2>Per-person expense balancer</h2>
+        <p class="explain">Based on what each traveler above said they've already spent.</p>
+      </div>
+      <div id="settlement-body">
+        <p class="muted">Add at least two travelers with a spent amount above, then regenerate the plan.</p>
+      </div>
+    </div>
+
+    <div class="panel packing-panel">
+      <div class="panel-head">
+        <h2>Group packing &amp; prep</h2>
+        <p class="explain">One list, split across the group so nobody over-packs or forgets the essentials.</p>
+      </div>
+      <ul class="packing-list" id="packing-list"></ul>
+    </div>
+
+  </section>
+
+</main>
+
+<button id="chat-launcher" class="chat-launcher" aria-label="Open trip assistant">Ask BeyondTrip</button>
+
+<div id="chat-panel" class="chat-panel hidden">
+  <div class="chat-head">
+    <span>Trip assistant</span>
+    <button id="chat-close" aria-label="Close chat">×</button>
+  </div>
+  <div id="chat-messages" class="chat-messages">
+    <div class="chat-msg bot">Ask me things like "what if we drop flights?" or "can we do this in 2 days instead?"</div>
+  </div>
+  <form id="chat-form" class="chat-form">
+    <input type="text" id="chat-input" placeholder="Ask about your trip..." autocomplete="off">
+    <button type="button" id="chat-mic" class="chat-mic" aria-label="Ask by voice" title="Ask by voice">🎤</button>
+    <button type="submit">Send</button>
+  </form>
+</div>
+
+<footer class="site-footer">
+  <p>Developed by Rohan Bhowmik</p>
+  <div class="footer-socials">
+    <a href="https://github.com/rohanbhowm25308" target="_blank" rel="noopener" aria-label="GitHub">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M9 19c-4.3 1.4-4.3-2.5-6-3m12 5v-3.5c0-1 .1-1.4-.5-2 2.8-.3 5.5-1.4 5.5-6a4.6 4.6 0 0 0-1.3-3.2 4.2 4.2 0 0 0-.1-3.2s-1.1-.3-3.5 1.3a12.3 12.3 0 0 0-6.2 0C6.5 2.8 5.4 3.1 5.4 3.1a4.2 4.2 0 0 0-.1 3.2A4.6 4.6 0 0 0 4 9.5c0 4.6 2.7 5.7 5.5 6-.6.6-.6 1.2-.5 2V21"/>
+      </svg>
+    </a>
+    <a href="https://www.linkedin.com/in/rohan-bhowmik-b014473a1/" target="_blank" rel="noopener" aria-label="LinkedIn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/>
+        <rect x="2" y="9" width="4" height="12"/>
+        <circle cx="4" cy="4" r="2"/>
+      </svg>
+    </a>
+    <a href="https://www.instagram.com/rohan_._.bhowmik.84/" target="_blank" rel="noopener" aria-label="Instagram">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="2" y="2" width="20" height="20" rx="5"/>
+        <path d="M16 11.4a4 4 0 1 1-7.9-1.1A4 4 0 0 1 16 11.4z"/>
+        <line x1="17.5" y1="6.5" x2="17.5" y2="6.5"/>
+      </svg>
+    </a>
+  </div>
+</footer>
+
+<script src="{{ url_for('static', filename='js/particles.js') }}"></script>
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
